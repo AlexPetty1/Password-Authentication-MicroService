@@ -1,56 +1,77 @@
 from argon2 import PasswordHasher
 import zmq
+from pymongo import MongoClient
 
 # Store port number for the program to bind to
-PORT_NUM = 9999
+PORT_NUM = 9995
 
 # Store separator for input and output
 SEPERATOR = '\n'
-
 SUCCESS = 1
 FAIL = 0
 
+#set uri equal to connection string
+connectionString = "SET ME TO CONNECTION STRING"
+client = MongoClient(connectionString)
+mydb = client.authenticationMicroservice
+userCollection = mydb.userInfo
 
-def argon2():
-    ph = PasswordHasher()
-    hash = ph.hash("s3kr3tp4ssw0rd")
-    print(hash)
-    print(ph.verify(hash, "s3kr3tp4ssw0rd"))
+#verifies a connection to mongoDB
+try:
+    client.admin.command('ping')
+except Exception as e:
+    print(e)
+    print("Mongo could not connect")
+    exit()
 
+
+
+def isUserInDB(username):
+    query = { "username": username}
+    doesUserExist = userCollection.count_documents(query)
+
+    if(doesUserExist == 0):
+        return False
+    
+    return True
 
 
 def addType(username, password):
-    doesUsernameExist = False
-
-    if(doesUsernameExist == True):
+    #user must not exist
+    if(isUserInDB(username)== True):
         return (FAIL, "Username already exists")
     
+    #computes hash
     ph = PasswordHasher()
     hash = ph.hash(password)
 
-    return (SUCCESS, "Password and Username added")
-    #store hash in database
+    #adds user
+    user = { "username": username, "password": hash }
+    userCollection.insert_one(user)
+
+    return (SUCCESS, "Username and Password added")
+
 
 def checkType(username, inputPassword):
-    doesUsernameExist = False
-    doesPasswordExist = False
-
-    if(doesUsernameExist == False):
+    #user must exist
+    if(isUserInDB(username) == False):
         return (FAIL, "Username does not exist")
-    
-    if(doesPasswordExist == False):
-        return (FAIL, "Password does not exist")
-    
+
     #get hash from database
-    hash = "adadda"
+    query = { "username": username}
+    queryResults = userCollection.find_one(query)
+    hash = queryResults["password"]
+    print("Hash: " + str(hash))
     ph = PasswordHasher()
     
-
-    if(ph.verify(hash, inputPassword)):
-        return (SUCCESS, "User authenticated")
-    else:
+    #verifies hash
+    try:
+        if(ph.verify(hash, inputPassword)):
+            return (SUCCESS, "User authenticated")
+        else:
+            return (FAIL, "Invalid password")
+    except:
         return (FAIL, "Invalid password")
-
 
 def main():
     context = zmq.Context()
@@ -61,29 +82,30 @@ def main():
         message = socket.recv()
         message = message.decode()
         messageSep = message.split(SEPERATOR)
-        print(messageSep)
+        print("Recieved: " + message + "\n\n")
 
         if(len(messageSep) != 3):
-            print("Needs three inputs, seperated by new line")
+            socket.send_string("Error\n \n0\nMust have three inputs seperated by a newline character")
+            continue
         
         messageType = messageSep[0]
         username = messageSep[1]
         password = messageSep[2]
 
-        messageBack = 0
-        success = 0
-
+        messageBack = ""
+        result = 0
         match messageType:
             case 'Add':
-                (success, messageBack) = addType(username, password)
+                (result, messageBack) = addType(username, password)
             case 'Check':
-                (success, messageBack) = checkType(username, password)
+                (result, messageBack) = checkType(username, password)
             case _:
-                success = FAIL
+                result = FAIL
                 messageBack = "Invalid type"
-        
-        returnMessage = str(messageType) + "\n" + str(username) + "\n" + str(success) + "\n" + messageBack
-        print(returnMessage)
+                messageType = "Error"
+
+        returnMessage = str(messageType) + "\n" + str(result) + "\n" + messageBack
+        print("Returning: " + returnMessage)
         socket.send_string(returnMessage)
 
 

@@ -1,7 +1,6 @@
 import zmq
 
-PORT_NUM = 9999
-
+PORT_NUM = 9995
 context = zmq.Context()
 
 #  Socket to talk to server
@@ -26,18 +25,28 @@ while(True):
     username = input("Input username: ")
     password = input("Password: ")
 
-    #  Do 10 requests, waiting each time for a response
     messageSent = str(inputType) + "\n" + str(username) + "\n" + str(password)
     socket.send_string(messageSent)
 
-    #  Get the reply.
-    message = socket.recv()
-    message = message.decode()
-    print("Message returned: \n" + message + "\n\n")
+    #  Get the reply
+    response = socket.recv()
+    response = response.decode()
+    responseSep = response.split("\n")
 
+    outputType = responseSep[0]
+    result = responseSep[1]
+    responseMessage = responseSep[2]
+
+    print("\nResponse:")
+    print(outputType)
+    print(result)
+    print(responseMessage)
+
+
+    #prompt new input
     decision = input("Input 1 to input another request\nInput 2 exit: ")
     while ((decision != "1") and (decision != "2")):
-        decision = input("Input 1 to input another request \nInput 2 exit: ")
+        decision = input("Input 1 to input another request \nInput 2 exit\n: ")
 
     if(decision == "2"):
         break
