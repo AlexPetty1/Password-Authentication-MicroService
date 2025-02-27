@@ -62,16 +62,17 @@ Each output will be seperated by a new line
 **Example Response**
 ```python
 response = socket.recv()
-    response = response.decode()
-    responseSep = response.split("\n")
+response = response.decode()
+responseSep = response.split("\n")
 
-    outputType = responseSep[0]
-    result = responseSep[1]
-    responseMessage = responseSep[2]
+outputType = responseSep[0]
+result = responseSep[1]
+responseMessage = responseSep[2]
 
-    print("\nResponse:")
-    print(outputType)
-    print(result)
-    print(responseMessage)
+print("\nResponse:")
+print(outputType)
+print(result)
+print(responseMessage)
 ```
 
+![UML Diagram](UMLDiagram.jpg "UML Diagram")
