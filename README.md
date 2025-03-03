@@ -1,4 +1,6 @@
 # Password-Authentication-MicroService
+A user authentication, service. Allows, users to add user name and passwords. Then, can check if the username and password is correct.
+Setup for a mongoDB database and uses Argon2ID for hashing password.
 
 **Setup**
 1. Install ZMQ with "pip install zmq" in the terminal
